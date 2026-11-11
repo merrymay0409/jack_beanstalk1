@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help Jack Climb the Beanstalk</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --paper: #f5f0e8;
+    --accent: #c8472b;
+    --correct: #2a7d4f;
+    --wrong: #c8472b;
+    --muted: #7a6f62;
+    --card: rgba(255,253,247,0.94);
+    --border: #d4c9b8;
+    --stageW: min(calc(100vh * 0.565), 45vw);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { background: #bfe3f5; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 24px 20px 80px;
+    position: relative;
+  }
+
+  /* soft blurred sky made from the same picture, fills the space beside the beanstalk */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -40px;
+    background: url('images/1.jpg') center / cover no-repeat;
+    filter: blur(28px);
+    z-index: -2;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.28);
+    z-index: -1;
+  }
+
+  /* ---------- the beanstalk picture, inside its frame ---------- */
+  #stage {
+    position: fixed;
+    top: 0; right: 0;
+    height: 100vh;
+    width: var(--stageW);
+    z-index: 0;
+    overflow: visible;
+  }
+  @supports (height: 100dvh) {
+    :root { --stageW: min(calc(100dvh * 0.565), 45vw); }
+    #stage { height: 100dvh; }
+  }
+  #pic {
+    position: absolute;
+    overflow: hidden;
+    box-shadow: 0 3px 16px rgba(26,26,46,0.28);
+  }
+  #stageImg {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  /* the frame is drawn on a canvas; the white glow keeps its lines visible on dark parts of the picture */
+  .frame-canvas {
+    position: absolute;
+    left: 0; top: 0;
+    pointer-events: none;
+    z-index: 2;
+    filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 4px rgba(255,255,255,0.95)) drop-shadow(0 0 9px rgba(255,255,255,0.75));
+  }
+
+  /* ---------- the arrow ---------- */
+  .arrow {
+    position: absolute;
+    left: 0; top: 0;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    transform: translate(0, -50%);
+    transition: left 1.3s cubic-bezier(.5,.1,.2,1), top 1.3s cubic-bezier(.5,.1,.2,1), opacity .6s ease;
+    pointer-events: none;
+    z-index: 5;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35));
+  }
+  .arrow.visible { opacity: 1; }
+  .arrow .tip {
+    width: 0; height: 0;
+    border-top: 11px solid transparent;
+    border-bottom: 11px solid transparent;
+    border-right: 18px solid var(--accent);
+  }
+  .arrow .label {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 5px 11px;
+    border-radius: 8px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+  .arrow.left { transform: translate(-100%, -50%); flex-direction: row-reverse; }
+  .arrow.left .tip { border-right: none; border-left: 18px solid var(--accent); }
+  .arrow.pop .label, .arrow.pop .tip { animation: pop 0.5s ease 1.1s; }
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.25)} 100%{transform:scale(1)} }
+
+  /* ---------- layout: quiz on the left, beanstalk on the right ---------- */
+  @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
+    body { padding-right: calc(var(--stageW) + 28px); }
+  }
+  /* narrow / portrait screens: the framed beanstalk fills the screen behind the cards */
+  @media not all and (min-aspect-ratio: 1/1), (max-width: 899px) {
+    #stage { left: 0; width: 100%; }
+    body {
+      padding-left: var(--padx, 20px);
+      padding-right: var(--padx, 20px);
+      padding-top: var(--pady, 24px);
+    }
+    .question-card { background: rgba(255,253,247,0.9) !important; }
+  }
+
+  /* ---------- header ---------- */
+  header {
+    text-align: center;
+    margin: 0 auto 22px;
+    max-width: 680px;
+    position: relative;
+    z-index: 2;
+  }
+  header .label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 4.5vw, 3rem);
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 10px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  }
+  header p {
+    color: #3b4a5a;
+    font-size: 0.98rem;
+    font-weight: 400;
+  }
+  .header-box {
+    background: rgba(255,253,247,0.82);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px 22px 20px;
+    box-shadow: 0 2px 14px rgba(26,26,46,0.08);
+  }
+
+  /* ---------- sticky progress bar ---------- */
+  .progress-bar-wrap {
+    max-width: 680px;
+    margin: 0 auto 26px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+    background: rgba(255,253,247,0.92);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 10px rgba(26,26,46,0.10);
+  }
+  .progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  .progress-label {
+    font-size: 13px;
+    color: var(--ink);
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  /* ---------- questions ---------- */
+  .quiz-container {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: relative;
+    z-index: 2;
+  }
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(26,26,46,0.07);
+  }
+  .q-number {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+  .q-sentence {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .q-prompt {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+    font-weight: 400;
+  }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+
+  .option-btn {
+    background: var(--paper);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 18px;
+    text-align: left;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--ink);
+    background: #fff;
+    transform: translateX(3px);
+  }
+  .option-btn .opt-label {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500;
+    color: var(--muted);
+    flex-shrink: 0;
+    transition: all 0.18s ease;
+  }
+  .option-btn:hover:not(:disabled) .opt-label { background: var(--ink); color: #fff; }
+  .option-btn.correct { border-color: var(--correct); background: rgba(42,125,79,0.08); color: var(--correct); cursor: default; }
+  .option-btn.correct .opt-label { background: var(--correct); color: #fff; }
+  .option-btn.wrong { border-color: var(--wrong); background: rgba(200,71,43,0.08); color: var(--wrong); cursor: default; }
+  .option-btn.wrong .opt-label { background: var(--wrong); color: #fff; }
+  .option-btn.reveal-correct { border-color: var(--correct); background: rgba(42,125,79,0.05); color: var(--correct); cursor: default; }
+  .option-btn.reveal-correct .opt-label { background: var(--correct); color: #fff; }
+  .option-btn:disabled { cursor: default; }
+
+  .feedback {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    display: none;
+    animation: fadeSlide 0.25s ease;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: rgba(42,125,79,0.12); color: var(--correct); }
+  .feedback.wrong-fb { background: rgba(200,71,43,0.10); color: var(--wrong); }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- result panel (shown when not every answer is correct) ---------- */
+  .score-panel {
+    max-width: 680px;
+    margin: 30px auto 0;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 20px;
+    padding: 36px 28px;
+    text-align: center;
+    display: none;
+    position: relative;
+    z-index: 2;
+    animation: fadeSlide 0.4s ease;
+  }
+  .score-panel.show { display: block; }
+  .score-panel h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; margin-bottom: 8px; }
+  .score-panel .big-score { font-family: 'Playfair Display', serif; font-size: 3.6rem; font-weight: 900; color: #fff; margin: 10px 0; }
+  .score-panel .sub { color: rgba(245,240,232,0.7); font-size: 0.95rem; margin-bottom: 24px; line-height: 1.5; }
+  .reset-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .reset-btn:hover { opacity: 0.85; }
+
+  /* ---------- the final picture (all answers correct) ---------- */
+  #reveal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    opacity: 0;
+    transition: opacity 3.5s ease-in-out;
+    overflow: hidden;
+    background: #cfe8f3;
+  }
+  #reveal.show { opacity: 1; }
+  #reveal .reveal-bg {
+    position: absolute;
+    inset: -40px;
+    background: url('images/2.jpg') center / cover no-repeat;
+    filter: blur(26px);
+  }
+  #reveal .reveal-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 10px 8px;
+  }
+  #reveal .reveal-stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  #reveal .reveal-frame {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  #reveal .reveal-pic {
+    position: absolute;
+    overflow: hidden;
+    box-shadow: 0 3px 18px rgba(0,0,0,0.35);
+  }
+  #reveal .reveal-img {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  #reveal .reveal-caption {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin: 4px auto 0;
+    padding: 7px 18px;
+    max-width: 94vw;
+    text-align: center;
+    background: rgba(246,238,219,0.9);
+    border: 1px solid #b59f74;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    opacity: 0;
+    transition: opacity 2s ease 2.6s;
+  }
+  #reveal.show .reveal-caption { opacity: 1; }
+  .reveal-caption p {
+    font-family: 'IM Fell English', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(0.82rem, 0.6rem + 0.9vw, 1.1rem);
+    line-height: 1.3;
+    letter-spacing: 0.3px;
+    color: #4a3522;
+    margin: 0;
+  }
+  .reveal-caption .reset-btn {
+    padding: 7px 22px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- the beanstalk picture with the arrow -->
+<div id="stage">
+  <div id="pic"><img id="stageImg" src="images/1.jpg" alt=""></div>
+  <canvas class="frame-canvas" id="stageFrame"></canvas>
+  <div class="arrow" id="arrow">
+    <span class="tip"></span>
+    <span class="label" id="arrowLabel">0 m</span>
+  </div>
+</div>
+
+<header>
+  <div class="header-box">
+    <div class="label">Questions with Prepositions</div>
+    <h1>Help Jack climb up the beanstalk!</h1>
+    <p>Choose the correct question form. Every correct answer takes Jack higher.</p>
+  </div>
+</header>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 16 &middot; Jack: 0 m</div>
+</div>
+
+<div class="quiz-container" id="quizContainer"></div>
+
+<div class="score-panel" id="scorePanel">
+  <h2>Jack is still climbing!</h2>
+  <div class="big-score" id="scoreBig"></div>
+  <div class="sub" id="scoreSub"></div>
+  <button class="reset-btn" onclick="resetQuiz()">Try Again</button>
+</div>
+
+<!-- final picture -->
+<div id="reveal">
+  <div class="reveal-bg"></div>
+  <div class="reveal-inner">
+    <div class="reveal-stage" id="revealStage">
+      <div class="reveal-frame" id="revealFrame">
+        <div class="reveal-pic" id="revealPic">
+          <img class="reveal-img" src="images/2.jpg" alt="Jack above the clouds, looking at the giant's castle">
+        </div>
+        <canvas class="frame-canvas" id="revealCanvas"></canvas>
+      </div>
+    </div>
+    <div class="reveal-caption">
+      <p>Jack is finally in another world above the clouds.<br>You helped him reach the giant's castle!</p>
+      <button class="reset-btn" onclick="resetQuiz()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const questions = [
+  { sentence: '"They are waiting for a bus."', options: ['For what are they waiting?', 'What are they waiting for?', 'What they are waiting for?'], correct: 1 },
+  { sentence: '"They are looking at a map."', options: ['At what are they looking?', 'What they are looking at?', 'What are they looking at?'], correct: 2 },
+  { sentence: '"We are listening to pop music."', options: ['What kind of music are you listening to?', 'What you are listening to?', 'What are you listening?'], correct: 0 },
+  { sentence: '"She is thinking about her exam."', options: ['About what is she thinking?', 'What is she thinking about?', 'What does she think about?'], correct: 1 },
+  { sentence: '"They live with their parents."', options: ['Who do they live with?', 'Who they live with?', 'With who do they live?'], correct: 0 },
+  { sentence: '"He is looking for his keys."', options: ['What is he looking?', 'For what is he looking?', 'What is he looking for?'], correct: 2 },
+  { sentence: '"They are dreaming about a new car."', options: ['What are they dreaming about?', 'About what are they dreaming?', 'What are they dreaming?'], correct: 0 },
+  { sentence: '"She is writing to her friend."', options: ['Who she is writing to?', 'Who is she writing to?', 'To whom is she writing?'], correct: 1 },
+  { sentence: '"They are talking to the manager."', options: ['Who are they talking to?', 'Who do they talk to?', 'To who are they talking?'], correct: 0 },
+  { sentence: '"This book belongs to Mary."', options: ['Who does this book belong to?', 'Who this book belongs to?', 'Who is this book belonging to?'], correct: 0 },
+  { sentence: '"They are waiting for their teacher."', options: ['Who they are waiting for?', 'Who are they waiting for?', 'What are they waiting for?'], correct: 1 },
+  { sentence: '"He is looking at the black board."', options: ['What does he look at?', 'At what is he looking?', 'What is he looking at?'], correct: 2 },
+  { sentence: '"She is worried about her results."', options: ['What she is worried about?', 'What is she worried about?', 'About what is she worried?'], correct: 1 },
+  { sentence: '"They often talk about football."', options: ['What do they often talk about?', 'What they often talk about?', 'What are they talking about?'], correct: 0 },
+  { sentence: '"The children are laughing at a funny clown."', options: ['What the children are laughing at?', 'Who are the children laughing at?', 'Who do the children laugh at?'], correct: 1 },
+  { sentence: '"I am looking for a new job."', options: ['What are you looking for?', 'What you are looking for?', 'What do you look for?'], correct: 0 },
+];
+
+const labels = ['a', 'b', 'c'];
+const TOTAL_HEIGHT = 1000;           // metres, the whole beanstalk
+let answered = 0;
+let score = 0;
+let userAnswers = new Array(questions.length).fill(null);
+
+/* height after n correct answers: the 1000 m are split into equal steps */
+function heightFor(n) { return Math.round(n * TOTAL_HEIGHT / questions.length); }
+
+/* ---------- where the beanstalk is in picture 1 (768 x 1376 px) ----------
+   y = pixel row, x = centre of the stalk, hw = half the stalk's width.
+   Tweak these numbers if the arrow ever looks off the stalk. */
+const IMG_W = 768, IMG_H = 1376;
+const Y_BOTTOM = 1230;   // foot of the stalk (0 m)
+const Y_TOP = 150;       // top of the stalk, next to the castle (1000 m)
+const STALK = [
+  { y: 1230, x: 370, hw: 100 },
+  { y: 1100, x: 400, hw: 85 },
+  { y: 950,  x: 410, hw: 70 },
+  { y: 800,  x: 365, hw: 60 },
+  { y: 650,  x: 395, hw: 50 },
+  { y: 500,  x: 400, hw: 50 },
+  { y: 400,  x: 405, hw: 50 },
+  { y: 300,  x: 470, hw: 45 },
+  { y: 220,  x: 540, hw: 35 },
+  { y: 150,  x: 640, hw: 25 },
+];
+
+function stalkAt(y) {
+  // STALK is sorted from the bottom (large y) to the top (small y)
+  for (let i = 0; i < STALK.length - 1; i++) {
+    const a = STALK[i], b = STALK[i + 1];
+    if (y <= a.y && y >= b.y) {
+      const t = (a.y - y) / (a.y - b.y);
+      return { x: a.x + (b.x - a.x) * t, hw: a.hw + (b.hw - a.hw) * t };
+    }
+  }
+  return y > STALK[0].y ? STALK[0] : STALK[STALK.length - 1];
+}
+
+const stage = document.getElementById('stage');
+const arrow = document.getElementById('arrow');
+const arrowLabel = document.getElementById('arrowLabel');
+
+/* ---------- the frame (images/frame.png, 1024 x 1536) ----------
+   The frame is rebuilt at any size: the corners and the two centre ornaments keep their
+   shape, and only the plain straight lines between them are stretched. */
+const frameImg = new Image();
+let frameReady = false;
+frameImg.onload = () => { frameReady = true; layoutAll(); };
+frameImg.src = 'images/frame.png';
+
+/* where the frame's straight lines sit in the original file */
+const F_LEFT = 52.5, F_RIGHT = 52.5, F_TOP = 82.5, F_BOTTOM = 86;
+
+function frameScale(W, H) { return Math.min(W / 1024, H / 1536); }
+
+function insets(W, H) {
+  const k = frameScale(W, H);
+  return { l: F_LEFT * k, r: F_RIGHT * k, t: F_TOP * k, b: F_BOTTOM * k };
+}
+
+function drawFrame(canvas, W, H) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = Math.max(1, Math.round(W * dpr));
+  canvas.height = Math.max(1, Math.round(H * dpr));
+  if (!frameReady) return;
+  const c = canvas.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, W, H);
+  c.imageSmoothingEnabled = true;
+  c.imageSmoothingQuality = 'high';
+  const k = frameScale(W, H), cx = W / 2, O = 0.6;   // O = tiny overlap so no seams show
+  const d = (sx, sy, sw, sh, dx, dy, dw, dh) => c.drawImage(frameImg, sx, sy, sw, sh, dx, dy, dw, dh);
+
+  // plain straight lines (stretched), drawn first
+  const orL = cx - 180 * k, orR = cx + 188 * k;               // left / right end of the centre ornaments
+  const leftEnd = 225 * k, rightStart = W - 206 * k;           // where the corners end
+  d(232, 0, 96, 160,    leftEnd - O, 0, orL - leftEnd + 2 * O, 160 * k);          // top, left of ornament
+  d(706, 0, 106, 160,   orR - O, 0, rightStart - orR + 2 * O, 160 * k);           // top, right of ornament
+  d(232, 1376, 96, 160, leftEnd - O, H - 160 * k, orL - leftEnd + 2 * O, 160 * k);   // bottom, left
+  d(706, 1376, 106, 160, orR - O, H - 160 * k, rightStart - orR + 2 * O, 160 * k);   // bottom, right
+  const vTop = 240 * k, vBot = H - 236 * k;
+  d(40, 250, 24, 60,    40 * k, vTop - O, 24 * k, vBot - vTop + 2 * O);           // left side
+  d(960, 250, 24, 60,   W - 64 * k, vTop - O, 24 * k, vBot - vTop + 2 * O);       // right side
+
+  // corners and centre ornaments (never stretched)
+  d(0, 0, 225, 240,       0, 0, 225 * k, 240 * k);
+  d(818, 0, 206, 240,     W - 206 * k, 0, 206 * k, 240 * k);
+  d(0, 1300, 225, 236,    0, H - 236 * k, 225 * k, 236 * k);
+  d(818, 1300, 206, 236,  W - 206 * k, H - 236 * k, 206 * k, 236 * k);
+  d(332, 0, 368, 160,     orL, 0, 368 * k, 160 * k);
+  d(332, 1376, 368, 160,  orL, H - 160 * k, 368 * k, 160 * k);
+}
+
+/* ---------- picture 1 + its frame ---------- */
+const pic = document.getElementById('pic');
+const stageFrame = document.getElementById('stageFrame');
+let picBox = { x: 0, y: 0, w: 1, h: 1 };
+
+function layoutStage() {
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const i = insets(W, H);
+  picBox = { x: i.l, y: i.t, w: W - i.l - i.r, h: H - i.t - i.b };
+  pic.style.left = picBox.x + 'px';
+  pic.style.top = picBox.y + 'px';
+  pic.style.width = picBox.w + 'px';
+  pic.style.height = picBox.h + 'px';
+  drawFrame(stageFrame, W, H);
+  // on narrow / portrait screens keep the cards inside the frame
+  const root = document.documentElement.style;
+  root.setProperty('--padx', Math.round(i.l + 14) + 'px');
+  root.setProperty('--pady', Math.round(i.t + 16) + 'px');
+}
+
+/* put the arrow where Jack is, after `correctCount` correct answers */
+function placeArrow() {
+  const h = heightFor(score);
+  const f = h / TOTAL_HEIGHT;
+  const y = Y_BOTTOM + (Y_TOP - Y_BOTTOM) * f;
+  const s = stalkAt(y);
+
+  // picture -> screen (the picture is drawn with object-fit: cover inside the frame)
+  const W = picBox.w, H = picBox.h;
+  const k = Math.max(W / IMG_W, H / IMG_H);
+  const ox = picBox.x + (W - IMG_W * k) / 2, oy = picBox.y + (H - IMG_H * k) / 2;
+
+  const onLeft = y < 330;                       // near the top there is no room on the right
+  const tipX = onLeft ? s.x - s.hw - 6 : s.x + s.hw + 6;
+  arrow.classList.toggle('left', onLeft);
+  arrow.style.left = (ox + tipX * k) + 'px';
+  arrow.style.top  = (oy + y * k) + 'px';
+}
+
+/* ---------- picture 2 + its frame ---------- */
+const reveal = document.getElementById('reveal');
+const revealStage = document.getElementById('revealStage');
+const revealFrame = document.getElementById('revealFrame');
+const revealPic = document.getElementById('revealPic');
+const revealCanvas = document.getElementById('revealCanvas');
+
+function layoutReveal() {
+  if (reveal.style.display !== 'block') return;
+  const aw = revealStage.clientWidth, ah = revealStage.clientHeight;
+  // the frame has the same 2:3 shape as picture 2: make it as big as the free space allows
+  const H = Math.max(1, Math.min(ah, aw * 1.5)), W = H / 1.5;
+  revealFrame.style.width = W + 'px';
+  revealFrame.style.height = H + 'px';
+  const i = insets(W, H);
+  revealPic.style.left = i.l + 'px';
+  revealPic.style.top = i.t + 'px';
+  revealPic.style.width = (W - i.l - i.r) + 'px';
+  revealPic.style.height = (H - i.t - i.b) + 'px';
+  drawFrame(revealCanvas, W, H);
+}
+
+function layoutAll() { layoutStage(); placeArrow(); layoutReveal(); }
+
+function moveArrow() {
+  const h = heightFor(score);
+  arrowLabel.textContent = h + ' m';
+  placeArrow();
+  if (score > 0) {
+    arrow.classList.add('visible');
+    arrow.classList.remove('pop');
+    void arrow.offsetWidth;
+    arrow.classList.add('pop');
+  } else {
+    arrow.classList.remove('visible', 'pop');
+  }
+}
+window.addEventListener('resize', () => {
+  arrow.style.transition = 'none';
+  layoutAll();
+  void arrow.offsetWidth;
+  arrow.style.transition = '';
+});
+window.addEventListener('orientationchange', () => setTimeout(layoutAll, 150));
+
+/* ---------- quiz ---------- */
+function buildQuiz() {
+  const container = document.getElementById('quizContainer');
+  container.innerHTML = '';
+  questions.forEach((q, qi) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `card-${qi}`;
+    card.innerHTML = `
+      <div class="q-number">Question ${qi + 1} of ${questions.length}</div>
+      <div class="q-sentence">${q.sentence}</div>
+      <div class="q-prompt">Choose the correct question form:</div>
+      <div class="options" id="opts-${qi}">
+        ${q.options.map((opt, oi) => `
+          <button class="option-btn" id="btn-${qi}-${oi}" onclick="handleAnswer(${qi}, ${oi})">
+            <span class="opt-label">${labels[oi]}</span>
+            ${opt}
+          </button>
+        `).join('')}
+      </div>
+      <div class="feedback" id="fb-${qi}"></div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function handleAnswer(qi, chosen) {
+  if (userAnswers[qi] !== null) return;
+  userAnswers[qi] = chosen;
+
+  const q = questions[qi];
+  const isCorrect = chosen === q.correct;
+  if (isCorrect) score++;
+  answered++;
+
+  for (let oi = 0; oi < q.options.length; oi++) {
+    const btn = document.getElementById(`btn-${qi}-${oi}`);
+    btn.disabled = true;
+    if (oi === chosen && isCorrect) btn.classList.add('correct');
+    else if (oi === chosen && !isCorrect) btn.classList.add('wrong');
+    else if (oi === q.correct) btn.classList.add('reveal-correct');
+  }
+
+  const fb = document.getElementById(`fb-${qi}`);
+  fb.classList.add('show');
+  const h = heightFor(score);
+  if (isCorrect) {
+    fb.classList.add('correct-fb');
+    fb.textContent = `✓ Correct! Jack climbs up to ${h} m.`;
+  } else {
+    fb.classList.add('wrong-fb');
+    fb.textContent = `✗ Not quite. The correct answer is: "${q.options[q.correct]}" Jack stays at ${h} m.`;
+  }
+
+  moveArrow();
+  updateProgress();
+
+  if (answered === questions.length) {
+    if (score === questions.length) setTimeout(showReveal, 2200);   // let the arrow reach the top first
+    else setTimeout(showScore, 700);
+  }
+}
+
+function updateProgress() {
+  const pct = (answered / questions.length) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').innerHTML =
+    `${answered} / ${questions.length} &middot; Jack: ${heightFor(score)} m`;
+}
+
+/* all answers correct: the whole screen dissolves into picture 2 */
+function showReveal() {
+  const r = document.getElementById('reveal');
+  r.style.display = 'block';
+  layoutReveal();
+  void r.offsetWidth;
+  r.classList.add('show');
+}
+
+/* some answers wrong: Jack did not reach the top */
+function showScore() {
+  const panel = document.getElementById('scorePanel');
+  panel.classList.add('show');
+  document.getElementById('scoreBig').textContent = `${heightFor(score)} m`;
+  document.getElementById('scoreSub').textContent =
+    `You answered ${score} out of ${questions.length} correctly, so Jack climbed ${heightFor(score)} m of ${TOTAL_HEIGHT} m. Try again to help him reach the castle!`;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetQuiz() {
+  answered = 0;
+  score = 0;
+  userAnswers = new Array(questions.length).fill(null);
+
+  const r = document.getElementById('reveal');
+  r.classList.remove('show');
+  r.style.display = 'none';
+
+  document.getElementById('scorePanel').classList.remove('show');
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressLabel').innerHTML = '0 / 16 &middot; Jack: 0 m';
+  buildQuiz();
+  moveArrow();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// preload the final picture so the dissolve is smooth
+new Image().src = 'images/2.jpg';
+
+buildQuiz();
+layoutAll();
+</script>
+</body>
+</html>
