@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Help Jack Climb the Beanstalk</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&family=Libre+Caslon+Text:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #1a1a2e;
@@ -82,7 +82,7 @@
     filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 4px rgba(255,255,255,0.95)) drop-shadow(0 0 9px rgba(255,255,255,0.75));
   }
 
-  /* ---------- the arrow ---------- */
+  /* ---------- the arrow (old-map / antique signpost look) ---------- */
   .arrow {
     position: absolute;
     left: 0; top: 0;
@@ -93,29 +93,47 @@
     transition: left 1.3s cubic-bezier(.5,.1,.2,1), top 1.3s cubic-bezier(.5,.1,.2,1), opacity .6s ease;
     pointer-events: none;
     z-index: 5;
-    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35));
+    filter: drop-shadow(0 3px 4px rgba(40,22,6,0.5));
   }
   .arrow.visible { opacity: 1; }
   .arrow .tip {
-    width: 0; height: 0;
-    border-top: 11px solid transparent;
-    border-bottom: 11px solid transparent;
-    border-right: 18px solid var(--accent);
+    position: relative;
+    width: 21px; height: 36px;
+    background: #6b4a24;
+    clip-path: polygon(0 50%, 100% 0, 100% 100%);
+    margin-right: -1px;
+  }
+  .arrow .tip::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: #ecdcb0;
+    clip-path: polygon(6px 50%, 101% 3px, 101% calc(100% - 3px));
   }
   .arrow .label {
-    background: var(--accent);
-    color: #fff;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: linear-gradient(#f4e8c8, #e6d29e);
+    border: 3px double #6b4a24;
+    border-left: 0;
+    color: #5b2412;
+    font-family: 'Libre Caslon Text', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
     font-weight: 700;
-    font-size: 0.95rem;
-    padding: 5px 11px;
-    border-radius: 8px;
+    font-size: 1.02rem;
+    padding: 0 13px 0 10px;
+    border-radius: 0 5px 5px 0;
     white-space: nowrap;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.6px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.55);
+    box-shadow: inset 0 0 7px rgba(120,80,30,0.35);
   }
   .arrow.left { transform: translate(-100%, -50%); flex-direction: row-reverse; }
-  .arrow.left .tip { border-right: none; border-left: 18px solid var(--accent); }
+  .arrow.left .tip { clip-path: polygon(0 0, 100% 50%, 0 100%); margin-right: 0; margin-left: -1px; }
+  .arrow.left .tip::after { clip-path: polygon(-1% 3px, calc(100% - 6px) 50%, -1% calc(100% - 3px)); }
+  .arrow.left .label { border-left: 3px double #6b4a24; border-right: 0; padding: 0 10px 0 13px; border-radius: 5px 0 0 5px; }
   .arrow.pop .label, .arrow.pop .tip { animation: pop 0.5s ease 1.1s; }
-  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.25)} 100%{transform:scale(1)} }
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.22)} 100%{transform:scale(1)} }
 
   /* ---------- layout: quiz on the left, beanstalk on the right ---------- */
   @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
@@ -360,10 +378,13 @@
     inset: 0;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    gap: 6px;
     padding: 4px 10px 8px;
   }
   #reveal .reveal-stage {
     position: relative;
+    align-self: stretch;
     flex: 1 1 auto;
     min-height: 0;
   }
@@ -387,36 +408,72 @@
   #reveal .reveal-caption {
     flex: 0 0 auto;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 6px 20px;
-    margin: 4px auto 0;
-    padding: 7px 18px;
-    max-width: 94vw;
+    gap: 14px;
+    max-width: min(94vw, 760px);
+    padding: 16px 22px 18px;
     text-align: center;
-    background: rgba(246,238,219,0.9);
-    border: 1px solid #b59f74;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    background: rgba(246,238,219,0.94);
+    border: 4px double #8b6f3d;
+    border-radius: 12px;
+    box-shadow: 0 3px 16px rgba(0,0,0,0.35);
     opacity: 0;
     transition: opacity 2s ease 2.6s;
   }
   #reveal.show .reveal-caption { opacity: 1; }
   .reveal-caption p {
-    font-family: 'IM Fell English', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+    font-family: 'Libre Caslon Text', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
     font-style: italic;
-    font-weight: 400;
-    font-size: clamp(0.82rem, 0.6rem + 0.9vw, 1.1rem);
+    font-weight: 700;
+    font-size: clamp(1.65rem, 6.9vw, 2.5rem);   /* upright / portrait screens */
     line-height: 1.3;
-    letter-spacing: 0.3px;
-    color: #4a3522;
+    letter-spacing: 0.2px;
+    color: #3a2410;
     margin: 0;
   }
   .reveal-caption .reset-btn {
-    padding: 7px 22px;
-    font-size: 0.85rem;
-    border-radius: 8px;
+    padding: 11px 30px;
+    font-size: 1rem;
+    border-radius: 9px;
+  }
+  /* wide screens: picture on the left, the words beside it on the right */
+  #reveal.side .reveal-inner {
+    flex-direction: row;
+    justify-content: center;
+    gap: 22px;
+    padding: 6px 14px;
+  }
+  #reveal.side .reveal-stage { flex: 0 0 auto; align-self: center; }
+  #reveal.side .reveal-caption { max-width: none; padding: 24px 26px 26px; }
+  #reveal.side .reveal-caption p { font-size: clamp(2.2rem, 2.7vw, 3.2rem); }
+
+  /* ---------- the castle (third picture): fades in, zooms toward the viewer, then dissolves ---------- */
+  #castle {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    display: none;
+    opacity: 0;
+    overflow: hidden;
+    background: #cfe8f3;
+    transition: opacity 1.6s ease-in-out;
+  }
+  #castle.show { opacity: 1; }
+  #castle img {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: 52% 50%;
+    transform-origin: 52% 48%;
+    transform: scale(1);
+    will-change: transform;
+  }
+  #castle.zoom img {
+    transform: scale(1.7);
+    transition: transform 5.4s cubic-bezier(.4, .05, .45, 1);
   }
 </style>
 </head>
@@ -454,10 +511,13 @@
   <button class="reset-btn" onclick="resetQuiz()">Try Again</button>
 </div>
 
+<!-- third picture: the castle -->
+<div id="castle"><img src="images/3.jpg" alt="The giant's castle among the clouds"></div>
+
 <!-- final picture -->
 <div id="reveal">
   <div class="reveal-bg"></div>
-  <div class="reveal-inner">
+  <div class="reveal-inner" id="revealInner">
     <div class="reveal-stage" id="revealStage">
       <div class="reveal-frame" id="revealFrame">
         <div class="reveal-pic" id="revealPic">
@@ -466,7 +526,7 @@
         <canvas class="frame-canvas" id="revealCanvas"></canvas>
       </div>
     </div>
-    <div class="reveal-caption">
+    <div class="reveal-caption" id="revealCaption">
       <p>Jack is finally in another world above the clouds.<br>You helped him reach the giant's castle!</p>
       <button class="reset-btn" onclick="resetQuiz()">Play Again</button>
     </div>
@@ -636,8 +696,26 @@ const revealFrame = document.getElementById('revealFrame');
 const revealPic = document.getElementById('revealPic');
 const revealCanvas = document.getElementById('revealCanvas');
 
+const revealCaption = document.getElementById('revealCaption');
+
 function layoutReveal() {
   if (reveal.style.display !== 'block') return;
+  const iw = reveal.clientWidth, ih = reveal.clientHeight;
+  // wide screens: words beside the picture; tall screens: words under it
+  const side = iw / ih >= 1.25;
+  reveal.classList.toggle('side', side);
+  if (side) {
+    const padX = 14, padY = 6, gap = 22, minCap = 260, maxCap = 580;
+    const fh = Math.max(1, Math.min(ih - 2 * padY, (iw - 2 * padX - gap - minCap) * 1.5));
+    const fw = fh / 1.5;
+    revealStage.style.width = fw + 'px';
+    revealStage.style.height = fh + 'px';
+    revealCaption.style.width = Math.min(maxCap, iw - 2 * padX - gap - fw) + 'px';
+  } else {
+    revealStage.style.width = '';
+    revealStage.style.height = '';
+    revealCaption.style.width = '';
+  }
   const aw = revealStage.clientWidth, ah = revealStage.clientHeight;
   // the frame has the same 2:3 shape as picture 2: make it as big as the free space allows
   const H = Math.max(1, Math.min(ah, aw * 1.5)), W = H / 1.5;
@@ -732,7 +810,7 @@ function handleAnswer(qi, chosen) {
   updateProgress();
 
   if (answered === questions.length) {
-    if (score === questions.length) setTimeout(showReveal, 2200);   // let the arrow reach the top first
+    if (score === questions.length) setTimeout(startFinale, 2200);   // let the arrow reach the top first
     else setTimeout(showScore, 700);
   }
 }
@@ -744,7 +822,24 @@ function updateProgress() {
     `${answered} / ${questions.length} &middot; Jack: ${heightFor(score)} m`;
 }
 
-/* all answers correct: the whole screen dissolves into picture 2 */
+/* all answers correct: castle fades in and zooms toward the viewer, then dissolves into picture 2 */
+let finaleTimers = [];
+function startFinale() {
+  const c = document.getElementById('castle');
+  c.style.display = 'block';
+  void c.offsetWidth;
+  c.classList.add('show');
+  finaleTimers.push(setTimeout(() => c.classList.add('zoom'), 250));
+  finaleTimers.push(setTimeout(showReveal, 3400));            // final picture starts to dissolve in over the castle
+  finaleTimers.push(setTimeout(hideCastle, 3400 + 3500 + 400)); // ...and once it is fully there the castle is put away
+}
+function hideCastle() {
+  const c = document.getElementById('castle');
+  c.classList.remove('show', 'zoom');
+  c.style.display = 'none';
+}
+
+/* the whole screen dissolves into picture 2 */
 function showReveal() {
   const r = document.getElementById('reveal');
   r.style.display = 'block';
@@ -764,6 +859,9 @@ function showScore() {
 }
 
 function resetQuiz() {
+  finaleTimers.forEach(clearTimeout);
+  finaleTimers = [];
+  hideCastle();
   answered = 0;
   score = 0;
   userAnswers = new Array(questions.length).fill(null);
@@ -782,6 +880,7 @@ function resetQuiz() {
 
 // preload the final picture so the dissolve is smooth
 new Image().src = 'images/2.jpg';
+new Image().src = 'images/3.jpg';
 
 buildQuiz();
 layoutAll();
